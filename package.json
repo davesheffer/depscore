@@ -1,7 +1,7 @@
 {
   "name": "shouldi",
-  "version": "0.3.0",
-  "description": "Should I install this? See what a single npm dependency really drags in — packages, disk, and install scripts that run on your machine — before you install it.",
+  "version": "0.4.0",
+  "description": "Should I install this? Audit any npm package — or your whole project — before you install: real (npm-accurate) dependency count, disk, maintainers you'd trust, stale deps, and the literal install scripts that run code on your machine.",
   "type": "module",
   "bin": {
     "shouldi": "cli.js"

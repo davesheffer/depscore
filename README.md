@@ -9,17 +9,39 @@ npx shouldi express
 ```
   should i install express ?
 
-  📦 64 packages added        (28 direct, you asked for 1)
-  👤 36 maintainers you'd be trusting
-  💾 2.1 MB on disk
+  📦 68 packages added        (28 direct, you asked for 1)
+  👤 38 maintainers you'd be trusting
+  💾 2.0 MB on disk
   ✓  no install scripts
-  🕰  oldest dep last shipped 11y ago — ee-first (25 stale, 2y+)
-  ────────────────────────────────────────
-  GRADE  C   "some deps haven't shipped in years — may be unmaintained."
-  estimate — latest version of each unique dependency
+  🕰  oldest dep last shipped 11y ago — ee-first (26 stale, 2y+)
+  ──────────────────────────────────────────────
+  GRADE  B   "some deps haven't shipped in years — may be unmaintained."
+  resolved like npm — highest version satisfying each range
 ```
 
-You asked for **1** package. You got **64**. That's the npm deal — and most of the time you never look. `shouldi` makes you look, in two seconds, with no install.
+You asked for **1** package. You got **68**. That's the npm deal — and most of the time you never look. `shouldi` makes you look, in two seconds, with no install.
+
+**Or audit your whole app at once** — run it with no argument in any project:
+
+```sh
+npx shouldi
+```
+```
+  should i trust my-app's dependencies ?
+
+  📦 266 packages in the tree        (3 direct deps) · 233 unique names
+  👤 135 maintainers you'd be trusting
+  💾 13 MB on disk
+  ⚠  1 package runs code on your machine at install:
+     node-sass
+       postinstall: node scripts/build.js
+  🪦 12 deprecated package(s)
+  🕰  oldest dep last shipped 13y ago — async-foreach (208 stale, 2y+)
+  ──────────────────────────────────────────────
+  GRADE  D   "..."
+```
+
+That's your entire `dependencies` + `devDependencies` tree — every maintainer you trust and every install script that runs — in two seconds, no install.
 
 ---
 
@@ -27,7 +49,7 @@ You asked for **1** package. You got **64**. That's the npm deal — and most of
 
 Every `npm install` is a trust decision you make blind:
 
-- **You add 1 package, you trust 64** — and **36 maintainers** you've never heard of. Each is code, and a person with publish rights, that ends up in your app.
+- **You add 1 package, you trust 68** — and **38 maintainers** you've never heard of. Each is code, and a person with publish rights, that ends up in your app.
 - **Some run scripts on your machine** the moment they install (`postinstall`, `preinstall`). That's the exact door supply-chain attacks walk through.
 - **Some are deprecated or abandoned** — `shouldi` shows the oldest dep's last publish, so "last shipped 11 years ago" stops being a surprise *after* it's in your lockfile.
 
@@ -72,10 +94,13 @@ So "I'll just install it" becomes a decision instead of a reflex.
 ## Usage
 
 ```sh
-npx shouldi <package>
+npx shouldi <package>      # audit one package before you add it
 npx shouldi react
 npx shouldi @scope/name
-npx shouldi left-pad@1.3.0
+npx shouldi left-pad@1.3.0  # pin a version or range
+npx shouldi express@^5      # ranges work — resolved like npm
+
+npx shouldi                 # no arg → audit ./package.json's whole tree
 ```
 
 No flags to learn. Run it, read the card, move on.
@@ -97,20 +122,19 @@ npx shouldi "$NEW_DEP" || exit 1
 
 Starts at 100, loses points for:
 
-- **install scripts** (−8 each) — code that runs on your machine
-- **flagged install scripts** (up to −30 each) — scaled by how many danger signals one command trips (network, pipe-to-shell, eval…)
-- **deprecated packages** (−6 each)
-- **stale packages** (−3 each) — no publish in 2+ years
-- **disk weight** (up to −20)
-- **dependency count** (up to −20)
+- **flagged install scripts** (up to −40 each) — scaled by how many danger signals one command trips (network, pipe-to-shell, eval…). This is the only thing that can sink a package to **F on its own** — danger, not size.
+- **install scripts** (−5 each) — benign native builds are a mild nudge, not a death sentence
+- **deprecated packages** (−5 each)
+- **stale packages** (−2 each) — no publish in 2+ years
+- **disk weight** (up to −12) and **dependency count** (up to −15) — bloat is a nudge, not a verdict
 
 Maintainer count and oldest-publish age are shown for context (they're the *who* and *how-fresh* of what you're trusting); they inform the quip but don't directly move the grade.
 
-`A` install with confidence · `B` fine · `C` look closer · `D` heavy · `F` think twice.
+`A` install with confidence · `B` fine · `C` look closer · `D` heavy · `F` real risk — read the install script.
 
 ## How it works
 
-Hits the npm registry [packument](https://github.com/npm/registry/blob/master/docs/responses/package-metadata.md) endpoint and walks the dependency graph in parallel — one request per unique package, covering deps, size, install scripts, maintainers, and publish dates in a single fetch. Each unique package is counted once, resolved to its latest version — an **estimate** of the shape and risk of what you'd pull in, not a byte-exact lockfile. Nothing is installed and nothing touches disk.
+Hits the npm registry [packument](https://github.com/npm/registry/blob/master/docs/responses/package-metadata.md) endpoint and walks the dependency graph in parallel — one request per unique package, covering deps, size, install scripts, maintainers, and publish dates in a single fetch. Every dependency range is resolved **the way npm does** — the highest published version that satisfies it — with its own zero-dependency semver matcher (cross-checked against `node-semver` for parity), and the tree is deduped by `name@version`, so the package count reflects what actually lands in `node_modules`. Nothing is installed and nothing touches disk.
 
 Zero runtime dependencies. Node 18+.
 
