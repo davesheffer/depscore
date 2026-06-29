@@ -74,19 +74,57 @@ function age(iso) {
   return "days";
 }
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
 // Full packuments don't carry the abbreviated `hasInstallScript` boolean, so
 // detect it the way npm does: presence of an install-lifecycle script.
-function hasInstallScript(meta) {
+const INSTALL_PHASES = ["preinstall", "install", "postinstall"];
+function installCommands(meta) {
   const s = meta.scripts || {};
-  return !!(s.install || s.preinstall || s.postinstall);
+  return INSTALL_PHASES.filter((p) => s[p]).map((p) => ({ phase: p, cmd: s[p] }));
 }
 
-async function fetchPackument(name) {
+// Heuristic scan of an install command for behavior you almost never want
+// running unattended on your machine. Conservative patterns, labelled by kind.
+const DANGER = [
+  [/\b(curl|wget|fetch)\b|https?:\/\//i, "network"],
+  [/\|\s*(sh|bash|zsh|node|python)\b/i, "pipe-to-shell"],
+  [/\b(base64|atob|xxd)\b/i, "obfuscation"],
+  [/\beval\b|node\s+-e\b|new Function/i, "dynamic-exec"],
+  [/process\.env|printenv|[$]\{?[A-Z_]+\}?.*(curl|http|nc )/i, "reads-env"],
+  [/\brm\s+-rf\b|>\s*\/dev\/|mkfifo|nc\s+-/i, "destructive/recon"],
+];
+function scanDanger(cmd) {
+  const hits = [];
+  for (const [re, label] of DANGER) if (re.test(cmd)) hits.push(label);
+  return hits;
+}
+
+async function fetchPackument(name, attempt = 0) {
   const url = `${REGISTRY}/${name.replace("/", "%2f")}`;
-  const res = await fetch(url, { headers: { accept: ACCEPT } });
-  if (res.status === 404) throw new Error(`package not found: ${name}`);
-  if (!res.ok) throw new Error(`registry ${res.status} for ${name}`);
-  return res.json();
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(), 15000);
+  try {
+    const res = await fetch(url, {
+      headers: { accept: ACCEPT },
+      signal: ac.signal,
+    });
+    if (res.status === 404) throw new Error(`package not found: ${name}`);
+    if ((res.status === 429 || res.status >= 500) && attempt < 3) {
+      await sleep(300 * (attempt + 1) * (attempt + 1));
+      return fetchPackument(name, attempt + 1);
+    }
+    if (!res.ok) throw new Error(`registry ${res.status} for ${name}`);
+    return await res.json();
+  } catch (e) {
+    if ((e.name === "AbortError" || e.code === "ECONNRESET") && attempt < 3) {
+      await sleep(300 * (attempt + 1));
+      return fetchPackument(name, attempt + 1);
+    }
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 function pickVersion(packument, wanted) {
@@ -120,7 +158,8 @@ async function resolve(rootName, rootVersion) {
             version: v,
             depth: item.depth,
             size: (meta.dist && meta.dist.unpackedSize) || 0,
-            installScript: hasInstallScript(meta),
+            installCmds: installCommands(meta),
+            installScript: installCommands(meta).length > 0,
             deprecated: !!meta.deprecated,
             deps: Object.keys(meta.dependencies || {}),
             maintainers: (pkg.maintainers || meta.maintainers || [])
@@ -158,6 +197,14 @@ function score(records, rootName) {
   const deprecated = records.filter((r) => r.deprecated);
   const direct = records.filter((r) => r.depth === 1).length;
 
+  // annotate install-script packages with detected danger labels
+  for (const r of installScripts) {
+    const labels = new Set();
+    for (const c of r.installCmds) for (const l of scanDanger(c.cmd)) labels.add(l);
+    r.danger = [...labels];
+  }
+  const dangerous = installScripts.filter((r) => r.danger.length);
+
   // people you'd be trusting: union of maintainers across the whole tree
   const maintainerSet = new Set();
   for (const r of records) for (const m of r.maintainers) maintainerSet.add(m);
@@ -174,6 +221,13 @@ function score(records, rootName) {
 
   let pts = 100;
   pts -= Math.min(40, installScripts.length * 8);
+  // an install script that phones home is far worse than a build step; the more
+  // independent danger signals one command trips, the harder the hit.
+  const dangerPenalty = dangerous.reduce(
+    (a, r) => a + Math.min(30, r.danger.length * 12),
+    0
+  );
+  pts -= Math.min(60, dangerPenalty);
   pts -= Math.min(24, deprecated.length * 6);
   pts -= Math.min(15, stale.length * 3);
   if (size > 50e6) pts -= 20;
@@ -190,7 +244,9 @@ function score(records, rootName) {
   const oldestYears = oldest ? (now - Date.parse(oldest.publishedAt)) / YEAR_MS : 0;
 
   let quip;
-  if (installScripts.length)
+  if (dangerous.length)
+    quip = `an install script is flagged for ${dangerous[0].danger.join(", ")} — read the command above before you trust it.`;
+  else if (installScripts.length)
     quip = `${installScripts.length} package${installScripts.length > 1 ? "s" : ""} run${installScripts.length > 1 ? "" : "s"} code on your machine at install — review before trusting.`;
   else if (deprecated.length) quip = "ships deprecated packages — may rot soon.";
   else if (oldestYears >= 4 && pts < 88)
@@ -209,6 +265,7 @@ function score(records, rootName) {
     maintainers,
     oldest,
     stale,
+    dangerous,
     grade,
     quip,
     pts,
@@ -245,22 +302,27 @@ function render(rootName, rootVersion, s, errCount) {
   );
   out.push(`  💾 ${bold(bytes(s.size))} on disk`);
   if (s.installScripts.length) {
+    const n = s.installScripts.length;
     out.push(
-      `  ${red("⚠")}  ${bold(red(String(s.installScripts.length)))} ${red(
-        `package${s.installScripts.length > 1 ? "s" : ""} run${
-          s.installScripts.length > 1 ? "" : "s"
-        } install scripts on your machine`
+      `  ${red("⚠")}  ${bold(red(String(n)))} ${red(
+        `package${n > 1 ? "s" : ""} run${n > 1 ? "" : "s"} code on your machine at install:`
       )}`
     );
-    const names = s.installScripts
-      .map((r) => r.name)
-      .slice(0, 6)
-      .join(", ");
-    out.push(
-      `     ${dim(names)}${
-        s.installScripts.length > 6 ? dim(` +${s.installScripts.length - 6} more`) : ""
-      }`
-    );
+    // reveal the literal command(s) that will execute, dangerous ones first
+    const shown = [...s.installScripts]
+      .sort((a, b) => (b.danger?.length || 0) - (a.danger?.length || 0))
+      .slice(0, 6);
+    for (const r of shown) {
+      const flag = r.danger?.length ? ` ${red("🚨 " + r.danger.join(", "))}` : "";
+      out.push(`     ${bold(r.name)}${flag}`);
+      for (const c of r.installCmds) {
+        const danger = scanDanger(c.cmd).length > 0;
+        let cmd = c.cmd.replace(/\s+/g, " ").trim();
+        if (cmd.length > 72) cmd = cmd.slice(0, 71) + "…";
+        out.push(`       ${dim(c.phase + ":")} ${danger ? red(cmd) : gray(cmd)}`);
+      }
+    }
+    if (n > 6) out.push(dim(`     +${n - 6} more`));
   } else {
     out.push(`  ${green("✓")}  no install scripts`);
   }

