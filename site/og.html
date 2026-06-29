@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --paper:#f3f5f2; --ink:#0c140f; --ink-soft:#56635c; --line:#d8ded6;
+    --panel:#0c140f; --panel-line:#25332a; --panel-dim:#7c8a82; --panel-ink:#dfe6df;
+    --pass:#1f9d55; --fail:#d83a34;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{width:1200px;height:630px;overflow:hidden;}
+  body{
+    background:var(--paper); color:var(--ink);
+    font-family:'IBM Plex Sans',sans-serif;
+    display:grid; grid-template-columns:1.12fr .88fr;
+    position:relative;
+  }
+  body::before{
+    content:""; position:absolute; inset:0;
+    background:
+      radial-gradient(540px 300px at 88% 8%, rgba(216,58,52,.08), transparent 60%),
+      radial-gradient(520px 320px at 4% 96%, rgba(31,157,85,.07), transparent 60%);
+  }
+  .left{ padding:70px 56px 64px; display:flex; flex-direction:column; position:relative; }
+  .brand{ display:flex; align-items:center; gap:13px; }
+  .brand .m{ width:42px;height:42px;border-radius:10px;background:var(--ink);color:var(--pass);
+    display:grid;place-items:center;font-family:'IBM Plex Mono';font-weight:700;font-size:25px; }
+  .brand .n{ font-family:'Space Grotesk';font-weight:700;font-size:30px;letter-spacing:-.01em; }
+  .eyebrow{ font-family:'IBM Plex Mono';font-size:14px;font-weight:600;letter-spacing:.2em;
+    text-transform:uppercase;color:var(--ink-soft);margin-top:38px; }
+  h1{ font-family:'Space Grotesk';font-weight:700;font-size:62px;line-height:1.02;
+    letter-spacing:-.035em;margin-top:16px; }
+  h1 .fail{ color:var(--fail); }
+  .sub{ font-size:21px;color:var(--ink-soft);margin-top:20px;max-width:30ch;line-height:1.5; }
+  .sub b{ color:var(--ink);font-weight:600; }
+  .cmd{ margin-top:auto; align-self:flex-start; display:inline-flex;align-items:center;gap:12px;
+    background:var(--panel);color:var(--panel-ink);font-family:'IBM Plex Mono';font-size:22px;
+    padding:15px 20px;border-radius:11px; }
+  .cmd .p{ color:var(--pass); }
+
+  .right{ position:relative; display:flex; align-items:center; justify-content:center; padding-right:56px; }
+  .card{ width:100%; background:var(--panel); border:1px solid var(--panel-line); border-radius:16px;
+    box-shadow:0 30px 60px -28px rgba(12,20,15,.5); overflow:hidden; }
+  .card-top{ display:flex; gap:7px; padding:14px 16px; border-bottom:1px solid var(--panel-line); }
+  .card-top i{ width:11px;height:11px;border-radius:50%;background:#2c3a31;display:block; }
+  .card-b{ padding:20px 22px; font-family:'IBM Plex Mono'; font-size:16px; line-height:1.95; color:var(--panel-ink); }
+  .r{ display:grid; grid-template-columns:84px 1fr; }
+  .r .k{ color:var(--panel-dim); }
+  .c-fail{ color:#f06b66; } .c-dim{ color:var(--panel-dim); } .c-w{ color:#fff; }
+  .verdict{ display:flex; align-items:center; gap:18px; margin-top:16px; padding-top:16px; border-top:1px solid var(--panel-line); }
+  .stamp{ width:78px;height:78px;border:3px solid var(--fail);color:var(--fail);border-radius:11px;
+    display:grid;place-items:center;font-family:'IBM Plex Mono';font-weight:700;font-size:46px;position:relative;flex:none; }
+  .stamp::after{ content:"";position:absolute;inset:6px;border:1.5px solid var(--fail);border-radius:6px;opacity:.4; }
+  .vt{ font-family:'IBM Plex Mono';font-size:15px;color:var(--panel-dim);line-height:1.4; }
+  .vt b{ display:block;color:#fff;font-size:16px;margin-bottom:3px; }
+</style>
+</head>
+<body>
+  <div class="left">
+    <div class="brand"><span class="m">d</span><span class="n">depsift</span></div>
+    <div class="eyebrow">Pre-install dependency audit</div>
+    <h1>Know the grade<br/>before you <span class="fail">install</span>.</h1>
+    <p class="sub">Real <b>CVEs</b>, the <b>install script</b> that runs on your machine, and a letter grade — before <span style="font-family:'IBM Plex Mono'">npm install</span>.</p>
+    <div class="cmd"><span class="p">$</span> npx depsift express</div>
+  </div>
+  <div class="right">
+    <div class="card">
+      <div class="card-top"><i></i><i></i><i></i></div>
+      <div class="card-b">
+        <div class="r"><span class="k">package</span><span class="c-w">lodash@4.17.4</span></div>
+        <div class="r"><span class="k">vulns</span><span class="c-fail">10 known &nbsp;1 critical · 4 high</span></div>
+        <div class="r"><span class="k">trust</span><span>1 maintainer</span></div>
+        <div class="r"><span class="k">oldest</span><span>9.5y ago</span></div>
+        <div class="verdict"><div class="stamp">F</div><div class="vt"><b>GRADE F</b>5 serious vulnerabilities<br/>patch or avoid.</div></div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
