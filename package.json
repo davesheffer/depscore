@@ -1,0 +1,36 @@
+{
+  "name": "shouldi",
+  "version": "0.1.0",
+  "description": "Should I install this? See what a single npm dependency really drags in — packages, disk, and install scripts that run on your machine — before you install it.",
+  "type": "module",
+  "bin": {
+    "shouldi": "cli.js"
+  },
+  "files": [
+    "cli.js"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node cli.js express"
+  },
+  "keywords": [
+    "npm",
+    "dependencies",
+    "supply-chain",
+    "security",
+    "install-scripts",
+    "bloat",
+    "node_modules",
+    "audit",
+    "cli",
+    "bundle-size"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/davesheffer/shouldi.git"
+  },
+  "license": "MIT",
+  "author": ""
+}
