@@ -189,7 +189,7 @@
       <h1>Know the grade<br />before you <span class="fail">install</span>.</h1>
       <p class="lede">depsift reads an npm package — or your whole project — straight from the registry and hands back a graded report: <b>real CVEs</b>, the <b>exact install script</b> that runs on your machine, and every <b>maintainer</b> you'd be trusting. No install. No account. No AI.</p>
       <div class="runline"><span class="p">$</span><span>npx depsift express</span><button onclick="navigator.clipboard.writeText('npx depsift express');this.textContent='copied'">copy</button></div>
-      <div class="spec"><span>zero dependencies</span><span>nothing to install</span><span>deterministic</span></div>
+      <div class="spec"><span>zero dependencies</span><span>nothing to install</span><span>npm · pnpm · bun · yarn</span></div>
     </div>
 
     <div class="term" aria-label="depsift example output">
@@ -217,6 +217,7 @@
       <div class="item"><div class="lhs"><span class="tag">scripts</span><h3>The literal install script</h3></div><p>Not "this package has an install script" — the exact command that will run on your machine, flagged when it reaches the network, pipes to a shell, or evals.</p></div>
       <div class="item"><div class="lhs"><span class="tag">tree</span><h3>npm-accurate count</h3></div><p>A zero-dependency semver resolver, parity-tested against node-semver, resolves every range the way npm does — so the package count matches what lands in <code>node_modules</code>.</p></div>
       <div class="item"><div class="lhs"><span class="tag">project</span><h3>Audit the whole project</h3></div><p>Run it with no argument in any repo to grade your entire <code>dependencies</code> and <code>devDependencies</code> tree at once.</p></div>
+      <div class="item"><div class="lhs"><span class="tag">lockfile</span><h3>Reads your lockfile</h3></div><p>In project mode depsift parses your <code>pnpm-lock.yaml</code>, <code>bun.lock</code>, <code>package-lock.json</code>, or <code>yarn.lock</code> and audits the <em>exact</em> versions you installed — not a fresh re-resolve. Every parser is zero-dependency; <code>--no-lock</code> forces registry resolution.</p></div>
       <div class="item"><div class="lhs"><span class="tag">trust</span><h3>Maintainers and staleness</h3></div><p>How many maintainers you'd be trusting, how many packages are deprecated, and when the oldest dependency last shipped.</p></div>
       <div class="item"><div class="lhs"><span class="tag">grade</span><h3>A verdict you can gate on</h3></div><p>A clear A through F. A critical CVE or a malicious install script forces an F and exit code 2 — drop it straight into CI.</p></div>
     </div>
